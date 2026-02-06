@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from motor.motor_asyncio import AsyncIOMotorClient
+from itsdangerous import BadSignature, URLSafeSerializer
 from starlette.middleware.sessions import SessionMiddleware
 
 load_dotenv()
@@ -22,6 +23,8 @@ if not AUTH_USERNAME or not AUTH_PASSWORD:
     raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD must be set in .env")
 if not MONGODB_URI:
     raise RuntimeError("MONGODB_URI must be set in .env")
+
+token_serializer = URLSafeSerializer(SESSION_SECRET, salt="valentine-auth")
 
 app = FastAPI(title="Valentine Week API")
 mongo_client: AsyncIOMotorClient | None = None
@@ -58,6 +61,29 @@ def verify_credentials(username: str, password: str) -> bool:
     return username == AUTH_USERNAME and password == AUTH_PASSWORD
 
 
+def create_token(username: str) -> str:
+    return token_serializer.dumps({"u": username})
+
+
+def verify_token(token: str | None) -> str | None:
+    if not token:
+        return None
+    try:
+        data = token_serializer.loads(token)
+    except BadSignature:
+        return None
+    return data.get("u")
+
+
+def get_bearer_token(request: Request) -> str | None:
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        return None
+    if not auth_header.lower().startswith("bearer "):
+        return None
+    return auth_header.split(" ", 1)[1].strip()
+
+
 @app.get("/health")
 async def health():
     return {"ok": True}
@@ -81,7 +107,7 @@ async def login(payload: LoginRequest, request: Request):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     request.session["user"] = payload.username
-    return {"ok": True, "user": payload.username}
+    return {"ok": True, "user": payload.username, "token": create_token(payload.username)}
 
 
 @app.post("/auth/logout")
@@ -94,7 +120,10 @@ async def logout(request: Request):
 async def auth_me(request: Request):
     user = request.session.get("user")
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        token_user = verify_token(get_bearer_token(request))
+        if not token_user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        user = token_user
     return {"ok": True, "user": user}
 
 
@@ -102,7 +131,10 @@ async def auth_me(request: Request):
 async def create_response(payload: ReplyCreate, request: Request):
     user = request.session.get("user")
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        token_user = verify_token(get_bearer_token(request))
+        if not token_user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        user = token_user
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message is required")
 

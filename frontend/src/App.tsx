@@ -9,6 +9,7 @@ const TOTAL_DAYS = 1;
 const DAY_INDEX = 1;
 const NOTE_CONTENT =
   "I regret what we both lost. I still think of the good in us, and I never stopped caring.";
+const TOKEN_KEY = "rose-day-token";
 
 const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -93,7 +94,9 @@ export default function App() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const token = localStorage.getItem(TOKEN_KEY);
         const response = await fetch(`${apiBase}/auth/me`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           credentials: "include"
         });
         setAuthState(response.ok ? "authenticated" : "unauthenticated");
@@ -122,8 +125,13 @@ export default function App() {
         throw new Error("Invalid credentials");
       }
 
+      const data = (await response.json()) as { token?: string };
+      if (data.token) {
+        localStorage.setItem(TOKEN_KEY, data.token);
+      }
       setAuthState("authenticated");
     } catch (error) {
+      localStorage.removeItem(TOKEN_KEY);
       setLoginError("That username or password did not match.");
       setAuthState("unauthenticated");
     } finally {
@@ -142,9 +150,13 @@ export default function App() {
     setReplyStatus("saving");
 
     try {
+      const token = localStorage.getItem(TOKEN_KEY);
       const response = await fetch(`${apiBase}/responses`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         credentials: "include",
         body: JSON.stringify({ message })
       });
