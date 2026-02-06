@@ -16,6 +16,7 @@ AUTH_PASSWORD = os.getenv("AUTH_PASSWORD")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "dev-secret-change-me")
 MONGODB_URI = os.getenv("MONGODB_URI")
 MONGODB_DB = os.getenv("MONGODB_DB", "valentine_week")
+SESSION_SAMESITE = os.getenv("SESSION_SAMESITE", "lax").lower()
 
 if not AUTH_USERNAME or not AUTH_PASSWORD:
     raise RuntimeError("AUTH_USERNAME and AUTH_PASSWORD must be set in .env")
@@ -40,7 +41,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     https_only=os.getenv("SESSION_HTTPS_ONLY", "false").lower() == "true",
-    same_site="lax"
+    same_site=SESSION_SAMESITE if SESSION_SAMESITE in {"lax", "strict", "none"} else "lax"
 )
 
 
