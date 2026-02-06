@@ -1,0 +1,72 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-cream text-ink-800 antialiased;
+}
+
+* {
+  @apply scroll-smooth;
+}
+
+.letter {
+  --letter-width: 260px;
+  --letter-height: 170px;
+  position: relative;
+  width: var(--letter-width);
+  height: var(--letter-height);
+  border-radius: 26px;
+  background: #ffffff;
+  border: 1px solid #f1dbe1;
+  box-shadow: 0 12px 30px rgba(36, 22, 26, 0.12);
+  cursor: pointer;
+}
+
+.letter:focus-visible {
+  outline: 2px solid #d1788c;
+  outline-offset: 4px;
+}
+
+.letter__base {
+  position: absolute;
+  inset: 14px;
+  border-radius: 20px;
+  border: 1px solid #f5e7eb;
+  background: linear-gradient(180deg, #ffffff 0%, #fbf2f4 100%);
+}
+
+.letter__flap {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: calc(var(--letter-width) / 2) solid transparent;
+  border-right: calc(var(--letter-width) / 2) solid transparent;
+  border-top: 90px solid #ffffff;
+  filter: drop-shadow(0 6px 10px rgba(36, 22, 26, 0.08));
+}
+
+.rose-sprite {
+  position: absolute;
+  left: 50%;
+  bottom: 80px;
+  transform: translate(-50%, 40px);
+  opacity: 0;
+  transition: transform 500ms ease, opacity 400ms ease;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rose-sprite--open {
+  transform: translate(-50%, -10px);
+  opacity: 1;
+}
